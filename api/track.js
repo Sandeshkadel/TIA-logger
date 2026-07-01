@@ -16,7 +16,7 @@ export default function handler(req, res) {
         const existingIndex = users.findIndex(u => u.id === body.id);
         
         if (existingIndex > -1) {
-            users[ExistingIndex] = { ...users[existingIndex], ...body, lastUpdate: new Date() };
+            users[existingIndex] = { ...users[existingIndex], ...body, lastUpdate: new Date() };
         } else {
             users.push({ ...body, lastUpdate: new Date() });
         }
