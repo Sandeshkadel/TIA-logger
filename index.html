@@ -525,7 +525,7 @@ async function fetchImages(){
 function updateStats(){
   const active=users.filter(u=>!u.deleted);
   const now=Date.now();
-  const live=active.filter(u=>(now-u.lastUpdate)<30000);
+  const live=active.filter(u=>(now-u.lastUpdate)<60000);
   const off=active.length-live.length;
   const hits=active.reduce((s,u)=>s+(u.hits||0),0);
   document.getElementById('sTotal').textContent=active.length;
@@ -567,11 +567,11 @@ function renderCards(){
   const now=Date.now();
   let html='';
   list.forEach((u,idx)=>{
-    const isLive=(now-u.lastUpdate)<30000 && !u.deleted;
+    const isLive=(now-u.lastUpdate)<60000 && !u.deleted;
     const statusCls=isLive?'live':'offline';
-    const lat=isLive?u.lat:(u.lastLat||u.lat);
-    const lng=isLive?u.lng:(u.lastLng||u.lng);
-    const addr=isLive?(u.address||'Locating...'):(u.lastAddress||u.address||'No location');
+    const lat=u.lat||u.lastLat;
+    const lng=u.lng||u.lastLng;
+    const addr=u.address||u.lastAddress||'Waiting for location...';
     const batPct=u.battery!=null?u.battery:null;
     const batColor=batPct>50?'var(--green)':batPct>20?'var(--amber)':'var(--red)';
     const mapId='map_'+u.id;
@@ -660,9 +660,9 @@ function renderCards(){
       const mapId='map_'+u.id;
       const el=document.getElementById(mapId);
       if(!el)return;
-      const isLive=(now-u.lastUpdate)<30000 && !u.deleted;
-      const lat=isLive?u.lat:(u.lastLat||u.lat);
-      const lng=isLive?u.lng:(u.lastLng||u.lng);
+      const isLive=(now-u.lastUpdate)<60000 && !u.deleted;
+      const lat=u.lat||u.lastLat;
+      const lng=u.lng||u.lastLng;
       initCardMap(u.id,mapId,lat,lng,isLive,u);
     });
   });
